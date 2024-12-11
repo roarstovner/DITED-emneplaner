@@ -24,7 +24,7 @@ Jeg har gjort så mye som mulig på 15 timer og endte med å bruke 16. Jeg rakk 
 
 Jeg benyttet ca. 8 timer på del 1-3 og ca. 6 timer på 4-5 og ca. 2 timer på denne rapporten. Det tar nå ca. 1 time å kode en ny variabel og rekode den i henhold til kodeboka, men det kommer til å ta lenger tid når alt skal valideres bedre.
 
-Jeg betalte $1,17 for beregningstid hos OpenAI. Jeg anslår at det koster 3 kr å kode hvert emne på alle variablene hvis vi henter 10 variable fra html-tags. Hvis det da er 50 kurs på 18 studiesteder blir total kostnad 2700 kr per år.
+Jeg betalte \$1,17 for beregningstid hos OpenAI. Jeg anslår at det koster 3 kr å kode hvert emne på alle variablene hvis vi henter 10 variable fra html-tags. Hvis det da er 50 kurs på 18 studiesteder blir total kostnad 2700 kr per år.
 
 ## Tags fra .html
 
@@ -103,7 +103,7 @@ Dette er det komplette kaos, men det er fordi det er vanskelig å bedømme hva s
 Jeg ba språkmodellen om å nevne hva den telte som arbeidskrav:
 
 ```{r}
-arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(emnekode, koder, Arbeidskravantall, gpt_response)
+arbeidskrav |> filter(koder == "gpt-4o-2024-08-06") |> select(emnekode, gpt_response) |> print(n = 30)
 ```
 
 Jeg har ettergått noen av de arbeidskravene som språkmodellen nevner, og alle jeg har sjekket står i emneplanen.
