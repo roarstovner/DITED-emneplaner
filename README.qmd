@@ -100,10 +100,10 @@ arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(-gpt_response
 
 Dette er det komplette kaos, men det er fordi det er vanskelig å bedømme hva som er et arbeidskrav. Det er i hvert fall opplagt at menneskene også er uenige seg imellom.
 
-Jeg ba språkmodellen om å nevne hva den telte som arbeidskrav. Jeg smelter den kolonnen sammen med den der de menneskelige koderne forklarte hva "Annet" var for noe.
+Jeg ba språkmodellen om å nevne hva den telte som arbeidskrav:
 
 ```{r}
-arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> mutate(forklaring = coalesce(gpt_response,Arbeidskravformat_annet)) |> select(emnekode, koder, Arbeidskravantall, forklaring) |> tinytable::tt()
+arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(emnekode, koder, Arbeidskravantall, gpt_response) |> tinytable::tt()
 ```
 
 Jeg har ettergått noen av de arbeidskravene som språkmodellen nevner, og alle jeg har sjekket står i emneplanen.
