@@ -1,0 +1,115 @@
+---
+title: "Rapport om førpilot for emneplandelen av TEPS"
+author: "Roar Bakken Stovner"
+date: 2024-12-11
+format: md
+---
+
+```{r}
+#| output: FALSE
+#| warning: FALSE
+
+library(tidyverse)
+```
+
+## Rapport om TEPS Emneplaner, førpilot
+
+Jeg har gjort så mye som mulig på 15 timer og endte med å bruke 16. Jeg rakk å
+
+1.  automatisk laste ned .html ut fra en liste med URLer
+2.  automatisk hente ut data fra enkelte tags i htmlen
+3.  fjerne html-tags og kun stå igjen med emneplanen
+4.  kode fire variable med gpt
+5.  gjort en manuell sammenlikning med de menneskelige koderne.
+
+Jeg benyttet ca. 8 timer på del 1-3 og ca. 6 timer på 4-5 og ca. 2 timer på denne rapporten. Det tar nå ca. 1 time å kode en ny variabel og rekode den i henhold til kodeboka, men det kommer til å ta lenger tid når alt skal valideres bedre.
+
+Jeg betalte $1,17 for beregningstid hos OpenAI. Jeg anslår at det koster 3 kr å kode hvert emne på alle variablene hvis vi henter 10 variable fra html-tags. Hvis det da er 50 kurs på 18 studiesteder blir total kostnad 2700 kr per år.
+
+## Tags fra .html
+
+Dataen jeg fikk fra .html ser slik ut. Jeg viser bare for ett fag.
+
+```{r}
+emneplaner <- read_rds("data/emneplaner.Rds")
+emneplaner |> slice(1) |> glimpse()
+```
+
+Dataene vi kan høste rett fra html-fila kommer til å variere fra institutsjon til institusjon, men trolig kan vi høste mange av variablene rett fra html-tags uten å benytte en språkmodell.
+
+Emneplanen vi henter ut blir seende slik ut:
+
+```{r}
+emneplaner$fulltekst[1]
+```
+
+Dette er flott for en maskin, for tegnene "\\n" betyr newline, så en maskin vil lese dette som en lang tekst med fin avsnittstruktur.
+
+# Kode variable med GPT
+
+Jeg har kodet fire variable. Jeg valgte variable ut fra kriteriet "stigende kompleksitet". Variablene er "forkunnskap" (ja/nei), "eksamensform" (8 forskjellige ja/nei), "arbeidskrav" (7 forskjellige ja nei) og "arbeidskravantall" (et heltall).
+
+## Forkunnskap
+
+Her er dataene for den menneskelige kodingen av 'forkunnskapskrav' pluss tre kall til språkmodellen.
+
+```{r}
+forkunnskap <- read_rds("data/forkunnskap.Rds") |> arrange(emnekode)
+begrunnelse <- forkunnskap |> filter(!is.na(begrunnelse)) |> select(emnekode,begrunnelse)
+
+forkunnskap |> select(!begrunnelse) |> pivot_wider(names_from = koder, values_from = Forkunnskapskrav) |> select(-human3) |> left_join(begrunnelse, by = "emnekode") |> tinytable::tt()
+```
+
+Kolonnenavnet angir språkmodellen, henholdsvis den billigere og raskere gpt-4o-mini og gpt-4o. Den varianter med gpt-4o som slutter på "CoT" benytter *Chain of thought reasoning* (CoT). Dette er at man først ber modellen om å resonnere og begrunne og deretter ber om svar. Begrunnelsen er i en egen kolonne. Vi ser at modellen synes det er uklart om "Ingen" og "Ingen forkunnskapskrav" er å eksplisitt nevne forkunnskapskrav eller ikke. Vi bør i fremtiden endre svaralternativene til
+
+1.  Ingen forkunnskapskrav
+2.  Ingen forkunnskapskrav nevnt.
+3.  Forkunnskapskrav nevnt.
+
+Bortsett fra dette ser det ut til at språkmodellene finner forkunnskapskravene og med riktig begrunnelse.
+
+## Eksamensform
+
+Her er dataene for eksamensform. Siden det er så mange variabler må man lese denne tabellen annerledes. Hver fjerde rad er ett emne.
+
+```{r}
+eksamensform <- read_rds("data/eksamensform.Rds")
+
+eksamensform |> select(-gpt_model,-gpt_response) |> relocate(koder, .after = emnekode) |> tinytable::tt()
+```
+
+Hvis man ser på den dyre modellen, "gpt-4o", er det knapt mulig å spore uenighet med menneskene, men noen er det:
+
+-   MGKH2100 (kunst og håndverk), språkmodellen finner en mappeeksamen som menneskene ikke finner. Ett menneske ser et refleksjonsnotat som ingen andre finner. MGKH2100 har muntlig eksamen der studentene skal levere et refleksjonsnotat på forhånd. Det er også en mappeinnlevering som en obligatorisk del av kurset. Kun det ene mennesket kodet riktig.\
+-   MGMO5900 (masteremnet), språkmodellen koder at de entreprenøriellene masterne har muntlig forsvar av graden, men menneskene sier kun skriftlig eksamen. Språkmodellen har rett, men dette kan diskuteres.
+-   MGNO4200 (norsk), språkmodellen finner en muntlig eksamen, mens mennesket finner ingen. Språkmodellen har rett.
+
+Språkmodellen kodet altså jevngodt eller såvidt bedre enn menneskene.
+
+## Arbeidskrav
+
+Nå har jeg funnet ut at "gpt-4o-mini" bare er for dårlig, så jeg viser ikke den i disse dataene.
+
+Jeg fant ut at den beste måten å kode dette på var å ikke ha "ja/nei" på hver enkelt arbeidskravstype, men kode antallet av hver type arbeidskrav. Da kunne man summere opp totalt antall arbeidskrav på slutten, og man trenger ikke å basere seg på at språkmodellen kan telle, noe de er dårlige til.
+
+```{r}
+arbeidskrav <- read_rds("data/arbeidskrav.Rds")
+
+arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(-gpt_response) |> tinytable::tt()
+```
+
+Dette er det komplette kaos, men det er fordi det er vanskelig å bedømme hva som er et arbeidskrav. Det er i hvert fall opplagt at menneskene også er uenige seg imellom.
+
+Jeg ba språkmodellen om å nevne hva den telte som arbeidskrav. Jeg smelter den kolonnen sammen med den der de menneskelige koderne forklarte hva "Annet" var for noe.
+
+```{r}
+arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> mutate(forklaring = coalesce(gpt_response,Arbeidskravformat_annet)) |> select(emnekode, koder, Arbeidskravantall, forklaring) |> tinytable::tt()
+```
+
+Jeg har ettergått noen av de arbeidskravene som språkmodellen nevner, og alle jeg har sjekket står i emneplanen.
+
+For meg virker det som om vi må definere arbeidskrav bedre. Av og til teller de menneskelige koderne obligatorisk oppmøte som et arbeidskrav, men av og til ikke. I prompten ba jeg språkmodellen om å ikke telle eksamener og obligatorisk oppmøte som arbeidskrav, men det ser ut til at den teller obligatorisk oppmøte av og til. Og det gjør jommen menneskene også. 🙃
+
+# Konklusjoner
+
+Konklusjonene er vel som TEPS-prosjektet om mastergrader: menneskene og språkmodellene koder ulikt, men det skyldes uklare koder. Jeg tror at ved å klargjøre kodeskjemaet sammen med språkmodellene vil alle disse variablene kunne kodes forholdsvis likt. Et lite spørsmålstegn bak antall arbeidskrav, men dette skyldes ikke at språkmodellene er dårlige til å gjøre opptellingen, snarere at det er vanskelig å definere hva som er et arbeidskrav.

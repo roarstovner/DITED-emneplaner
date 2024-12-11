@@ -61,19 +61,19 @@ parse_arbeidskrav <- function(replies){
 }
 
 arbeidskrav <- arbeidskrav |>
-  parse_arbeidskrav() |> 
+  parse_arbeidskrav() |>
   mutate(
     across(
       contains("Arbeidskrav"),
       as.integer
     )
-  ) |> 
-  rowwise() |> 
-    mutate(Arbeidskravantall = sum(across(contains("Arbeidskrav")))
-  ) |> 
+  ) |>
+  rowwise() |>
+  mutate(Arbeidskravantall = sum(across(contains("Arbeidskrav")))) |>
+  ungroup() |>
   rename(
     koder = gpt_model
-  ) |> 
+  ) |>
   relocate(Arbeidskravantall, .before = Arbeidskravformat.2)
 
 # load human data
@@ -94,7 +94,7 @@ humans <- humans |>
 
 # join with gpt data
 
-arbeidskrav <- arbeidskrav |> bind_rows(humans) |> arrange(emnekode)
+arbeidskrav <- arbeidskrav |> bind_rows(humans) |> arrange(emnekode) |> relocate(Arbeidskravformat.1, .before = Arbeidskravformat.2)
   
 write_rds(arbeidskrav, "data/arbeidskrav.Rds")
 
