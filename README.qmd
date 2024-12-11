@@ -103,7 +103,7 @@ Dette er det komplette kaos, men det er fordi det er vanskelig å bedømme hva s
 Jeg ba språkmodellen om å nevne hva den telte som arbeidskrav:
 
 ```{r}
-arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(emnekode, koder, Arbeidskravantall, gpt_response) |> tinytable::tt()
+arbeidskrav |> filter(koder != "gpt-4o-mini-2024-07-18") |> select(emnekode, koder, Arbeidskravantall, gpt_response)
 ```
 
 Jeg har ettergått noen av de arbeidskravene som språkmodellen nevner, og alle jeg har sjekket står i emneplanen.
